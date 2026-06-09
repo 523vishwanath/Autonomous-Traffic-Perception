@@ -47,9 +47,9 @@
 
 ## 🎯 Overview
 
-This project implements a **production-grade, multi-task autonomous driving perception pipeline** built on the [BDD100K](https://bdd-data.berkeley.edu/) dataset — one of the largest and most diverse real-world driving datasets in existence (100,000 videos across diverse weather, lighting, and city conditions).
+This project implements a **production-grade, multi-task autonomous driving perception pipeline** built on the [BDD100K](https://bdd-data.berkeley.edu/) dataset — one of the largest and most diverse real-world driving datasets in existence (100,000 videos spanning day, night, dawn/dusk, clear, rainy, snowy, overcast, and foggy conditions across six US cities).
 
-The final system processes a 1080p driving video and simultaneously runs:
+The final system processes a 1080p driving video and simultaneously runs three perception tasks in one unified GPU pipeline:
 
 | Module | Model | Backend | Latency |
 |---|---|---|---|
@@ -143,26 +143,16 @@ Companies like **Waymo, Tesla, Cruise, Mobileye, and Zoox** run exactly this sta
 Modern vehicles (BMW, Mercedes, Toyota, Hyundai) use onboard ADAS chips (Mobileye EyeQ, NVIDIA Orin) to run real-time perception nearly identical to this pipeline. Drivable-area segmentation directly enables lane-keeping, adaptive cruise control, and emergency braking. The 9-class detection covers every object class relevant to collision avoidance.
 
 ### 🚦 Smart Traffic Infrastructure
-City traffic management systems increasingly use roadside cameras with perception models to:
-- Count vehicle types and traffic density in real time
-- Detect near-miss events and pedestrian violations
-- Optimize traffic signal timing dynamically
+City traffic management systems increasingly use roadside cameras with perception models to count vehicle types and traffic density in real time, detect near-miss events and pedestrian violations, and optimise signal timing dynamically. The detection and segmentation models here are directly applicable to such deployments.
 
-The detection and segmentation models here are directly applicable to such deployments.
+### 🌦️ All-Weather & All-Condition Reliability
+BDD100K explicitly captures driving across **daytime, nighttime, dawn/dusk, clear, rainy, snowy, overcast, and foggy** scenarios. Training on this breadth means the model is conditioned on the actual distribution of weather and lighting conditions a deployed system will encounter — not just ideal sunny-day driving. This is a key differentiator from models trained on cleaner academic datasets.
 
 ### 🚌 Fleet Safety & Dashcam AI
-Commercial vehicle fleets (trucking, delivery, ride-share) use onboard perception AI for:
-- Driver safety scoring
-- Near-miss and incident detection
-- Insurance telematics
-
-This pipeline runs on standard NVIDIA GPUs at 14–15 FPS on 1080p — well within the requirements for dashcam AI processing.
+Commercial vehicle fleets (trucking, delivery, ride-share) use onboard perception AI for driver safety scoring, near-miss and incident detection, and insurance telematics. This pipeline runs on standard NVIDIA GPUs at 14–15 FPS on 1080p — well within the requirements for dashcam AI processing.
 
 ### 🤖 Robotics & Industrial Automation
 The same perception stack generalises to warehouse robots, autonomous forklifts, and last-mile delivery robots that need to navigate in shared human environments. Drivable-area segmentation maps directly to "navigable floor surface" for ground robots.
-
-### 🏥 Emergency Response & Search Operations
-Perception systems on emergency vehicles and drones use detection models to identify people, vehicles, and hazards in complex urban environments. The person and rider classes in this model are directly relevant to such applications.
 
 ### 📐 Why This Matters for AI/ML Engineers
 
@@ -170,13 +160,13 @@ This project demonstrates a critical real-world insight that is often missing fr
 
 > **A production computer-vision system is not just about model accuracy. The bottleneck is almost never the model itself — it is preprocessing, postprocessing, visualization, memory bandwidth, and I/O throughput.**
 
-This pipeline went from **3.3 FPS → 14 FPS** without any change to the model architecture, purely through pipeline-level engineering: removing redundant rendering, batching depth computation, and using YOLO's built-in plot() instead of custom polygon drawing. That kind of systems thinking is what distinguishes production engineers from research engineers.
+This pipeline went from **~3.3 FPS → ~14 FPS** without any change to the model architecture, purely through pipeline-level engineering: removing redundant side-by-side rendering, batching depth computation every 5 frames, switching from custom polygon drawing to YOLO's built-in `plot()`, and down-sampling the depth inset. That kind of systems thinking is what distinguishes production engineers from research engineers.
 
 ---
 
 ## 📊 Performance Benchmarks
 
-All benchmarks measured on 1920×1080 video, imgsz=960, NVIDIA T4 GPU (Google Colab).
+All benchmarks measured on a 1920×1080 video (1,798 frames, 30 FPS source), imgsz=960, NVIDIA A100-SXM4-80GB (training) / T4 (deployment).
 
 ### Final Optimised Pipeline
 
@@ -186,26 +176,27 @@ All benchmarks measured on 1920×1080 video, imgsz=960, NVIDIA T4 GPU (Google Co
 | Input Resolution | 1920×1080 |
 | Output Resolution | 1920×1080 |
 | Image Size (inference) | 960 |
-| Detection Latency | **16.17 ms** |
-| Segmentation Latency | **15.68 ms** |
+| Detection Latency (avg) | **16.17 ms** |
+| Segmentation Latency (avg) | **15.68 ms** |
 | Depth Latency (avg, every 5 frames) | **6.28 ms** |
-| Overlay Latency | **13.05 ms** |
+| Overlay Latency (avg) | **13.05 ms** |
 | **Total Latency (avg)** | **51.18 ms** |
-| **End-to-End FPS** | **~14–15 FPS** |
-| Median Total Latency | 44.68 ms |
+| Total Latency (median) | 44.68 ms |
+| Total Latency (min) | 30.29 ms |
+| **End-to-End FPS (avg)** | **~13.8–14.3 FPS** |
 | Frames Processed | 1,798 |
 
 ### Optimisation Journey
 
 | Version | Output Size | Depth | Seg Renderer | FPS |
 |---|---|---|---|---|
-| v1 — Naive | 3840×1080 | Full screen (every frame) | Custom polygon | ~3.3 |
-| v2 — Side-by-side removed | 1920×1080 | Full screen | Custom polygon | ~6.0 |
-| v3 — Depth down-sampled | 1920×1080 | Inset (320px input) | Custom polygon | ~8.5 |
+| v1 — Naive | 3840×1080 (side-by-side) | Full screen, every frame | Custom polygon draw | ~3.3 |
+| v2 — Side-by-side removed | 1920×1080 | Full screen, every frame | Custom polygon draw | ~6.0 |
+| v3 — Depth down-sampled | 1920×1080 | Inset (320px input) | Custom polygon draw | ~8.5 |
 | v4 — YOLO built-in seg | 1920×1080 | Inset | **YOLO plot()** | ~11.0 |
-| **v5 — Depth every 5 frames** | **1920×1080** | **Inset (every 5)** | YOLO plot() | **~14–15** |
+| **v5 — Depth every 5 frames** | **1920×1080** | **Inset (every 5 frames)** | YOLO plot() | **~14–15** |
 
-**4× improvement** purely through pipeline engineering — no model changes.
+**4.3× improvement purely through pipeline engineering — zero model changes.**
 
 ---
 
@@ -269,6 +260,18 @@ pip install tensorrt
 ---
 
 ## 📥 Dataset Preparation
+
+### About BDD100K
+
+BDD100K is the largest open driving dataset available for academic and research use. It contains 100,000 dashcam video clips collected across **multiple US cities** (New York, San Francisco, Berkeley, and others) under exhaustive real-world conditions:
+
+| Condition Type | Variations |
+|---|---|
+| **Time of day** | Daytime · Night · Dawn/Dusk |
+| **Weather** | Clear · Rainy · Snowy · Overcast · Foggy · Partly cloudy |
+| **Scene type** | City street · Residential · Highway · Tunnel |
+
+This diversity is what makes BDD100K an industry-standard benchmark — and training on it means the model learns to handle the full distribution of conditions a deployed system will encounter.
 
 ### 1. Download BDD100K
 
@@ -348,7 +351,7 @@ Expected output:
 | Train | 10,500 | Model training |
 | Val | 1,500 | Training-time evaluation |
 | Test | 3,000 | Final benchmark |
-| **Total** | **15,000** | |
+| **Total** | **15,000** | Sampled from BDD100K 100k |
 
 ---
 
@@ -487,39 +490,76 @@ outputs/
 
 ## 📈 Results & Metrics
 
-### Object Detection (mAP on BDD100K test set)
+### Object Detection — YOLO26l on BDD100K (val, 1,500 images)
 
-| Class | AP50 |
-|---|---|
-| car | — |
-| person | — |
-| rider | — |
-| truck | — |
-| bus | — |
-| motorcycle | — |
-| bike | — |
-| traffic light | — |
-| traffic sign | — |
-| **mAP50 (all)** | **— (fill in after eval)** |
-| **mAP50-95** | **—** |
+> Model: YOLO26l (fused) · 190 layers · 24.75M parameters · 86.1 GFLOPs  
+> Hardware: NVIDIA A100-SXM4-80GB · imgsz=960  
+> Speed: **0.4 ms preprocess · 2.8 ms inference · 0.2 ms postprocess**
 
-> Fill in your evaluation results from `python train/train_detection.py eval ...`
+| Class | Images | Instances | Precision | Recall | **mAP50** | mAP50-95 |
+|---|---|---|---|---|---|---|
+| **All** | 1,500 | 27,616 | 0.708 | 0.510 | **0.563** | 0.307 |
+| car | 1,490 | 15,658 | 0.819 | 0.708 | **0.787** | 0.475 |
+| person | 475 | 1,834 | 0.747 | 0.555 | **0.632** | 0.317 |
+| traffic sign | 1,234 | 5,089 | 0.705 | 0.623 | **0.664** | 0.347 |
+| traffic light | 839 | 3,859 | 0.691 | 0.611 | **0.635** | 0.241 |
+| truck | 409 | 660 | 0.659 | 0.527 | **0.549** | 0.393 |
+| bus | 180 | 229 | 0.668 | 0.498 | **0.522** | 0.394 |
+| rider | 72 | 84 | 0.708 | 0.333 | **0.419** | 0.193 |
+| motor | 59 | 78 | 0.785 | 0.359 | **0.455** | 0.204 |
+| bike | 82 | 125 | 0.592 | 0.372 | **0.406** | 0.201 |
 
-### Drivable-Area Segmentation
+**Overall: mAP50 = 56.3% · mAP75 = 28.0% · mAP50-95 = 30.7%**
+
+> **Note on class difficulty:** BDD100K is significantly harder than COCO due to real-world diversity across weather conditions (rain, fog, snow) and lighting (night, dawn). Rare classes like `rider`, `motor`, and `bike` have very few validation instances (72–82 images), making their AP scores more volatile. The `car` class — the most critical for AV safety — achieves a strong 78.7% mAP50.
+
+---
+
+### Drivable-Area Segmentation — YOLO26l-seg on BDD100K (val, 1,000 images)
+
+> Model: YOLO26l-seg (fused) · 207 layers · 27.9M parameters · 139.4 GFLOPs  
+> Hardware: NVIDIA A100-SXM4-80GB · imgsz=960  
+> Speed: **0.2 ms preprocess · 5.2 ms inference · 0.6 ms postprocess**
+
+| Class | Images | Instances | Box P | Box R | Box mAP50 | Box mAP50-95 | Mask P | Mask R | Mask mAP50 | Mask mAP50-95 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **All** | 1,000 | 1,824 | 0.888 | 0.884 | **0.923** | 0.771 | 0.885 | 0.880 | **0.918** | 0.718 |
+| area/drivable | 922 | 924 | 0.942 | 0.936 | **0.964** | 0.798 | 0.936 | 0.929 | **0.959** | 0.740 |
+| area/alternative | 520 | 900 | 0.834 | 0.831 | **0.882** | 0.743 | 0.835 | 0.830 | **0.878** | 0.696 |
+
+**Overall: Mask mAP50 = 91.8% · Mask mAP50-95 = 71.8%**
+
+> Drivable-area segmentation achieves near-production-grade accuracy — 95.9% mAP50 on the primary drivable class. This quality directly enables reliable lane-keeping and obstacle avoidance decisions in a deployed system.
+
+---
+
+### TensorRT Inference Pipeline — Full Video Benchmark
+
+> Video: 1920×1080 @ 30 FPS · 1,798 frames · All three tasks running simultaneously
 
 | Metric | Value |
 |---|---|
-| mAP50 (box) | ~95+ |
-| mAP50-95 (box) | ~70+ |
-| Classes | 2 |
+| Avg Detection Latency | 16.17 ms |
+| Avg Segmentation Latency | 15.68 ms |
+| Avg Depth Latency (amortised, every 5 frames) | 6.28 ms |
+| Avg Overlay/Render Latency | 13.05 ms |
+| **Avg Total End-to-End Latency** | **51.18 ms** |
+| Median Total Latency | 44.68 ms |
+| Min Total Latency | 30.29 ms |
+| Max Total Latency | 1053.1 ms (first-frame warmup) |
+| **Avg FPS** | **~13.8–14.3 FPS** |
+| Frames Processed | 1,798 |
 
-### Output Frame
+The pipeline sustains a stable **~10–11 FPS per-frame** (real-time reporting) that grows to **~14 FPS average** once TensorRT kernels are warm. The maximum latency spike (1053 ms) is a one-time CUDA/TRT engine warmup on frame 1 — all subsequent frames stay within 30–60 ms.
 
-The final video frame contains:
-- **Detection boxes** — coloured per class with confidence scores
+### Output Frame Composition
+
+The final rendered video frame contains four simultaneous layers:
+
+- **Detection boxes** — coloured per class with confidence scores and class labels
 - **Segmentation overlay** — semi-transparent drivable-area masks (YOLO built-in rendering)
-- **Depth inset** — top-right grayscale relative depth map (Depth Anything V2, Tesla-style)
-- **Latency panel** — top-left dark panel showing per-module and total FPS/latency
+- **Depth inset** — top-right grayscale relative depth map (Depth Anything V2, Tesla-style inset)
+- **Latency panel** — top-left dark panel showing per-module and total FPS/latency in real time
 
 ---
 
@@ -528,14 +568,14 @@ The final video frame contains:
 | Layer | Technology |
 |---|---|
 | **Language** | Python 3.10+ |
-| **Deep Learning** | PyTorch 2.1+ |
+| **Deep Learning** | PyTorch 2.10–2.11+ with CUDA 12.8 |
 | **Detection / Segmentation** | Ultralytics YOLO (YOLO26l, YOLO26l-seg) |
 | **Depth Estimation** | Depth Anything V2 Small (HuggingFace Transformers) |
 | **Deployment / Acceleration** | NVIDIA TensorRT FP16 |
 | **Video I/O** | OpenCV |
 | **Dataset Visualisation** | FiftyOne |
 | **Data Format** | BDD100K JSON → YOLO .txt |
-| **Hardware** | NVIDIA GPU (T4 / A100 / Orin) |
+| **Training Hardware** | NVIDIA A100-SXM4-80GB (80 GB HBM2e) |
 | **Re-encoding** | FFmpeg (H.264 / yuv420p) |
 | **Benchmarking** | Pandas CSV + per-frame `time.perf_counter()` |
 
