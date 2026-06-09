@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# BDD100K Perception Pipeline — Python dependencies
+# ─────────────────────────────────────────────────────────────────────────────
+# Install:
+#   pip install -r requirements.txt
+#
+# For TensorRT export/inference, ensure TensorRT is installed separately:
+#   pip install tensorrt
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Core deep learning
+torch>=2.1.0
+torchvision>=0.16.0
+
+# YOLO detection & segmentation (Ultralytics)
+ultralytics>=8.3.0
+
+# Monocular depth estimation
+transformers>=4.40.0
+accelerate>=0.30.0
+
+# Image & video processing
+opencv-python>=4.9.0
+Pillow>=10.3.0
+
+# Data handling
+numpy>=1.26.0
+pandas>=2.2.0
+
+# Dataset visualisation (optional — needed for train/train_segmentation.py visualize)
+fiftyone>=0.24.0
+
+# YAML parsing (used in dataset YAML writers)
+PyYAML>=6.0
+
+# Progress bars
+tqdm>=4.66.0
+
+# Tabular display (optional, nice for benchmark printing)
+tabulate>=0.9.0

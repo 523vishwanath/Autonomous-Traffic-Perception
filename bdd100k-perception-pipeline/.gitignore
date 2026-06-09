@@ -1,0 +1,54 @@
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+
+# ─── Jupyter / Colab ──────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Model weights & engines ──────────────────────────────────────────────────
+*.pt
+*.pth
+*.onnx
+*.engine
+*.trt
+
+# ─── Dataset / data directories ───────────────────────────────────────────────
+data/
+datasets/
+*.zip
+*.tar.gz
+
+# ─── Video files ──────────────────────────────────────────────────────────────
+*.mp4
+*.avi
+*.mov
+*.mkv
+# Exception: keep any demo videos in assets/
+!assets/*.mp4
+!assets/*.gif
+
+# ─── Training run outputs ─────────────────────────────────────────────────────
+runs/
+outputs/
+results/
+
+# ─── OS files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ─── Credentials / secrets ────────────────────────────────────────────────────
+.env
+*.key
