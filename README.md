@@ -14,15 +14,23 @@
 
 ---
 
-> **Demo** 
->
-> ```html
-> <!-- Option A: GitHub-hosted video (upload the .mp4 to assets/) -->
-> <video src="assets/demo.mp4" autoplay loop muted playsinline width="100%"></video>
->
-> 
-> ```
-> [![Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://www.youtube.com/watch?v=PDP2xSCtjgk) 
+---
+
+## 🎥 Demo
+
+<div align="center">
+
+![BDD100K TensorRT Perception Demo](assets/demo.gif)
+
+</div>
+
+**Demo preview:** TensorRT-accelerated object detection, YOLO-based drivable-area segmentation, grayscale monocular depth visualization, and real-time FPS/latency overlay on a 1920×1080 BDD100K driving video.
+
+▶️ **Full demo video:** [Watch on YouTube](https://www.youtube.com/watch?v=PDP2xSCtjgk)
+
+> The GIF above provides a quick preview directly in the README. The full YouTube video shows the complete 37-second pipeline output.
+
+---
 
 
 ---
