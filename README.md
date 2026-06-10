@@ -14,15 +14,16 @@
 
 ---
 
-> **Demo** — place your output video here once uploaded to the repo or YouTube.
+> **Demo** 
 >
 > ```html
 > <!-- Option A: GitHub-hosted video (upload the .mp4 to assets/) -->
 > <video src="assets/demo.mp4" autoplay loop muted playsinline width="100%"></video>
 >
-> <!-- Option B: YouTube embed -->
-> <!-- [![Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://youtu.be/YOUR_VIDEO_ID) -->
+> 
 > ```
+> [![Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://www.youtube.com/watch?v=PDP2xSCtjgk) 
+
 
 ---
 
